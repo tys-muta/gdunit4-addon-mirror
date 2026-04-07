@@ -1,0 +1,96 @@
+name: sync-from-upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: "Sync target tag. Empty means latest GitHub release tag."
+        required: false
+        type: string
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve upstream tag
+        id: resolve
+        env:
+          INPUT_UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          tag = os.environ.get('INPUT_UPSTREAM_TAG', '').strip()
+          if not tag:
+              req = urllib.request.Request(
+                  'https://api.github.com/repos/godot-gdunit-labs/gdUnit4/releases/latest',
+                  headers={'Accept': 'application/vnd.github+json'}
+              )
+              with urllib.request.urlopen(req) as resp:
+                  tag = json.load(resp)['tag_name']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f'tag={tag}\n')
+          PY
+
+      - name: Clone upstream
+        run: |
+          git clone --depth 1 --branch "${{ steps.resolve.outputs.tag }}" https://github.com/godot-gdunit-labs/gdUnit4.git /tmp/gdUnit4-upstream
+
+      - name: Sync addon root and metadata
+        env:
+          UPSTREAM_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.gitignore' \
+            --exclude 'README.md' \
+            --exclude 'mirror.json' \
+            /tmp/gdUnit4-upstream/addons/gdUnit4/ ./
+          python3 - <<'PY'
+          import json, os, subprocess
+          from datetime import datetime, UTC
+          upstream_commit = subprocess.check_output(
+              ['git', '-C', '/tmp/gdUnit4-upstream', 'rev-parse', 'HEAD'],
+              text=True,
+          ).strip()
+          with open('mirror.json', 'w', encoding='utf-8') as fh:
+              json.dump({
+                  'schema_version': 1,
+                  'upstream_repo': 'https://github.com/godot-gdunit-labs/gdUnit4.git',
+                  'upstream_tag': os.environ['UPSTREAM_TAG'],
+                  'upstream_commit': upstream_commit,
+                  'mirror_generated_at': datetime.now(UTC).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              }, fh, indent=2)
+              fh.write('\n')
+          PY
+
+      - name: Commit and tag if changed
+        env:
+          UPSTREAM_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          if git diff --quiet --exit-code; then
+            echo "No changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "sync: ${UPSTREAM_TAG}"
+          mirror_index=$(git tag -l "upstream-${UPSTREAM_TAG}+mirror.*" | sed 's/.*mirror\.//' | sort -n | tail -n 1)
+          if [ -z "$mirror_index" ]; then
+            mirror_index=1
+          else
+            mirror_index=$((mirror_index + 1))
+          fi
+          git tag "upstream-${UPSTREAM_TAG}+mirror.${mirror_index}"
+          git push origin HEAD
+          git push origin --tags
