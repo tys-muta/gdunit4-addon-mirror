@@ -1,3 +1,4 @@
 GdUnitRunner.cfg
 reports/
 *.uid
+*.import
