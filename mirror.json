@@ -2,6 +2,6 @@
   "schema_version": 1,
   "upstream_repo": "https://github.com/godot-gdunit-labs/gdUnit4.git",
   "upstream_tag": "v6.1.2",
-  "upstream_commit": "6ba94e61d2ef9def01a7b211205e584afd9990da",
-  "mirror_generated_at": "2026-04-07T13:48:38Z"
+  "upstream_commit": "3ff9514357f683317c7d27270095423362fd0593",
+  "mirror_generated_at": "2026-04-13T05:58:24Z"
 }
