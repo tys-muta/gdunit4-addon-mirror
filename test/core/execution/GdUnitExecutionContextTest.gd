@@ -231,6 +231,7 @@ func test_collect_report_statistics_all_tests_skipped() -> void:
 				var ctx_test_call := GdUnitExecutionContext.of(ctx_test_hook)
 				ctx_test_call.gc(GdUnitExecutionContext.GC_ORPHANS_CHECK.TEST_CASE)
 				var expected_report := ctx_test_call.add_report(GdUnitReport.new().create(GdUnitReport.SKIPPED, index*5, "skipped test %d" % index))
+
 				ctx_test_hook.gc(GdUnitExecutionContext.GC_ORPHANS_CHECK.TEST_HOOK_AFTER)
 				# verify
 				ctx_test.gc()
@@ -298,6 +299,7 @@ func test_simmulate_flaky_test(retry_count: int, is_flaky: bool, is_failed: bool
 				if retry < 2:
 					expected_reports.append(ctx_test_call.add_report(GdUnitReport.new().create(GdUnitReport.FAILURE, 42, "error")))
 					expected_reports.append(ctx_test_call.add_report(GdUnitReport.new().create(GdUnitReport.FAILURE, 43, "error")))
+
 				ctx_test_hook.gc(GdUnitExecutionContext.GC_ORPHANS_CHECK.TEST_HOOK_AFTER)
 
 			ctx_test.gc()

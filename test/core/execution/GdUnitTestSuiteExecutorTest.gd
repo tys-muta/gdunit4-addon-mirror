@@ -56,7 +56,7 @@ func run_tests(tests :Array[GdUnitTestCase], settings := {}) -> Array[GdUnitEven
 			ProjectSettings.set_setting(key, settings[key])
 
 		# sync to main thread
-		await (Engine.get_main_loop() as SceneTree).process_frame
+		await get_tree().process_frame
 		# execute all tests
 		await executor.run_and_wait(tests)
 
@@ -105,14 +105,15 @@ func assert_event_states(events :Array[GdUnitEvent]) -> GdUnitArrayAssert:
 func assert_event_reports(events: Array[GdUnitEvent], expected_reports: Array) -> void:
 	var _events: Array[GdUnitEvent] = events
 	for event_index in _events.size():
-		var current: Array[GdUnitReport] = _events[event_index].reports()
+		var event := _events[event_index]
+		var current: Array[GdUnitReport] = event.reports()
 		var expected: Array = expected_reports[event_index] if expected_reports.size() > event_index else []
 		if expected.is_empty():
 			for m in current.size():
 				assert_str(flating_message(current[m].message() as String)).is_empty()
 		for m in expected.size():
 			if m < current.size():
-				assert_str(flating_message(current[m].message() as String)).starts_with(str(expected[m]))
+				assert_str(flating_message(current[m].message() as String)).append_failure_message(event.test_name()).starts_with(str(expected[m]))
 			else:
 				assert_str("<N/A>").is_equal(expected[m])
 
@@ -490,14 +491,14 @@ func test_execute_failure_and_orphans() -> void:
 			[],
 			[],
 			# ends with warnings
-			["WARNING: Detected 2 orphan nodes on test setup!",
-			 "WARNING: Detected 3 orphan nodes!"],
+			["WARNING: Detected 2 possible orphan nodes.",
+			 "WARNING: Detected 3 orphan nodes."],
 			[],
 			# ends with failure and warnings
-			["WARNING: Detected 2 orphan nodes on test setup!",
-			 "WARNING: Detected 4 orphan nodes!"],
+			["WARNING: Detected 2 possible orphan nodes.",
+			 "fail on test_case2()"],
 			# and one warning detected at stage 'after'
-			["WARNING: Detected 1 orphan nodes!"]
+			["WARNING: Detected 1 possible orphan nodes."]
 		])
 
 
@@ -548,7 +549,7 @@ func test_execute_failure_and_orphans_report_orphan_disabled() -> void:
 			[],
 			[],
 			# ends with a failure
-			["faild on test_case2()"],
+			["fail on test_case2()"],
 			[]
 		])
 
@@ -603,7 +604,7 @@ func test_execute_error_on_test_timeout() -> void:
 
 # This test checks if all test stages are called at each test iteration.
 func test_execute_fuzzed_metrics() -> void:
-	var tests := GdUnitTestResourceLoader.load_tests("res://addons/gdUnit4/test/core/resources/testsuites/TestSuiteFuzzedMetricsTest.resource")
+	var tests := GdUnitTestResourceLoader.load_tests("res://addons/gdUnit4/test/core/resources/testsuites/TestSuiteFuzzedMetricsTest.gd")
 	var all_tests: Array[GdUnitTestCase] = Array(tests.values(), TYPE_OBJECT, "RefCounted", GdUnitTestCase)
 
 	# simulate test suite execution
@@ -624,7 +625,7 @@ func test_execute_fuzzed_metrics() -> void:
 
 # This test checks if all test stages are called at each test iteration.
 func test_execute_parameterized_metrics() -> void:
-	var tests := GdUnitTestResourceLoader.load_tests("res://addons/gdUnit4/test/core/resources/testsuites/TestSuiteParameterizedMetricsTest.resource")
+	var tests := GdUnitTestResourceLoader.load_tests("res://addons/gdUnit4/test/core/resources/testsuites/TestSuiteParameterizedMetricsTest.gd")
 	var all_tests: Array[GdUnitTestCase] = Array(tests.values(), TYPE_OBJECT, "RefCounted", GdUnitTestCase)
 
 	# simulate test suite execution
@@ -684,7 +685,7 @@ func test_execute_failure_fuzzer_iteration() -> void:
 			[],
 			[],
 			# must fail after three iterations
-			["Found an error after '3' test iterations\n Expecting: 'false' but is 'true'"],
+			["Found an error after 3 test iterations\n Expecting: 'false' but is 'true'"],
 			[]
 		])
 
@@ -807,7 +808,7 @@ func test_execute_test_suite_is_skipped() -> void:
 			# must fail after three iterations
 			["""
 				The Entire test-suite is skipped!
-				  Skipped '2' tests
+				  Skipped 2 tests
 				  Reason: 'do not run this'
 				""".dedent().trim_prefix("\n")]
 		])

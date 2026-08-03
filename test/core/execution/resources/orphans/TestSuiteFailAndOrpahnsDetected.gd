@@ -37,7 +37,7 @@ func test_case2() -> void:
 	var n23 := Node.new()
 	var n24 := Node.new()
 	_orphans.append_array([n21, n22, n23, n24])
-	fail("faild on test_case2()")
+	fail("fail on test_case2()")
 	collect_orphan_node_details()
 
 
