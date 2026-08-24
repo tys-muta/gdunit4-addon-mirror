@@ -18,6 +18,9 @@ var example_parameters := [
 	'_test_set_a]'
 	]
 
+func parameters_as_array(index: int, arg1: String, arg2: String) -> Array[Variant]:
+	return [index, arg1, arg2]
+
 class TestObj:
 
 	func _init() -> void:
@@ -480,6 +483,26 @@ func test_resolve_parameters_with_scrip_constans() -> void:
 			["array", TYPE_ARRAY, []],
 			["packed_array", TYPE_PACKED_BYTE_ARRAY, []]
 			])
+
+
+func test_resolve_parameters_with_array_functions(index: int, arg1: String, arg2: String, _test_parameters := [
+	[0, "abc", "d,ef"],
+	[1, "xxx", "foo(y)"],
+	[2, 'y"yy', "d\"ef"],
+	[3, "z'zz", 'd\'ef'],
+	]) -> void:
+	if index == 0:
+		assert_str(arg1).is_equal("abc")
+		assert_str(arg2).is_equal("d,ef")
+	elif index == 1:
+		assert_str(arg1).is_equal("xxx")
+		assert_str(arg2).is_equal("foo(y)")
+	elif index == 2:
+		assert_str(arg1).is_equal('y"yy')
+		assert_str(arg2).is_equal("d\"ef")
+	elif index == 3:
+		assert_str(arg1).is_equal("z'zz")
+		assert_str(arg2).is_equal('d\'ef')
 
 
 func _resolve_parameters(child_name: String) -> Array[Array]:
